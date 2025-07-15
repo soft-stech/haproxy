@@ -799,35 +799,6 @@ error:
 }
 #endif
 
-/* https://datatracker.ietf.org/doc/html/rfc8422#appendix-A */
-/* SECG to NIST curves name */
-static struct curves { char *name; int nid; } curves_list [] =
-{
-	{ "secp256r1",  NID_X9_62_prime256v1 },
-	{ "prime256v1", NID_X9_62_prime256v1 },
-	{ "P-256",      NID_X9_62_prime256v1 },
-
-	{ "secp384r1",  NID_secp384r1 },
-	{ "P-384",      NID_secp384r1 },
-
-	{ "secp521r1",  NID_secp521r1 },
-	{ "P-521",      NID_secp521r1 },
-	{ NULL,         0 },
-};
-
-/* convert a curves name to a openssl NID */
-int curves2nid(const char *curve)
-{
-	struct curves *curves = curves_list;
-
-	while (curves->name) {
-		if (strcmp(curve, curves->name) == 0)
-			return curves->nid;
-		curves++;
-	}
-	return -1;
-}
-
 /* convert an OpenSSL NID to a NIST curves name */
 const char *nid2nist(int nid)
 {
@@ -936,5 +907,127 @@ const char *sigalg2str(int sigalg)
 	}
 
 	return NULL;
+}
+
+
+/*
+ * Like in x509_v_codes array, the following macros enable to use some NIDs that
+ * can be undefined depending on the SSL library type or version. Those NIDs
+ * will be converted to their numerical value when possible in
+ * "init_curves_tab" function (called during init).
+ */
+#undef _Q
+#define _Q(x) (#x)
+#undef V
+#define V(x) .nid = -1, .nid_val_str = _Q(x)
+
+/*
+ * Curve identifier to curve name mapping table. We use the actual identifiers
+ * as defined in https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-parameters-8
+ * as well as NIDs, special identifiers used in SSL libraries such as OpenSSL.
+ * The names used are the standard SECG ones as well as the NIST ones.
+ */
+static struct curve { int curve_id; int nid; char *nid_val_str; const char *name; const char *nist; } curves_list[] =
+{
+	{ 1, V(NID_sect163k1), "sect163k1", "K-163" },
+	{ 2, V(NID_sect163r1), "sect163r1", NULL },
+	{ 3, V(NID_sect163r2), "sect163r2", "B-163" },
+	{ 4, V(NID_sect193r1), "sect193r1", NULL },
+	{ 5, V(NID_sect193r2), "sect193r2", NULL },
+	{ 6, V(NID_sect233k1), "sect233k1", "K-233" },
+	{ 7, V(NID_sect233r1), "sect233r1", "B-233" },
+	{ 8, V(NID_sect239k1), "sect239k1", NULL },
+	{ 9, V(NID_sect283k1), "sect283k1", "K-283" },
+	{ 10, V(NID_sect283r1), "sect283r1", "B-283" },
+	{ 11, V(NID_sect409k1), "sect409k1", "K-409" },
+	{ 12, V(NID_sect409r1), "sect409r1", "B-409" },
+	{ 13, V(NID_sect571k1), "sect571k1", "K-571" },
+	{ 14, V(NID_sect571r1), "sect571r1", "B-571" },
+	{ 15, V(NID_secp160k1), "secp160k1", NULL },
+	{ 16, V(NID_secp160r1), "secp160r1", NULL },
+	{ 17, V(NID_secp160r2), "secp160r2", NULL },
+	{ 18, V(NID_secp192k1), "secp192k1", NULL },
+	{ 19, V(NID_X9_62_prime192v1), "secp192r1", "P-192" },
+	{ 20, V(NID_secp224k1), "secp224k1", NULL },
+	{ 21, V(NID_secp224r1), "secp224r1", "P-224" },
+	{ 22, V(NID_secp256k1), "secp256k1", NULL },
+	{ 23, V(NID_X9_62_prime256v1), "secp256r1", "P-256" },
+	{ 24, V(NID_secp384r1), "secp384r1", "P-384" },
+	{ 25, V(NID_secp521r1), "secp521r1", "P-521" },
+	{ 26, V(NID_brainpoolP256r1), "brainpoolP256r1", NULL },
+	{ 27, V(NID_brainpoolP384r1), "brainpoolP384r1", NULL },
+	{ 28, V(NID_brainpoolP512r1), "brainpoolP512r1", NULL },
+	{ 29, V(EVP_PKEY_X25519), "ecdh_x25519", NULL },
+	{ 30, V(EVP_PKEY_X448), "ecdh_x448", NULL },
+	{ 31, V(NID_brainpoolP256r1tls13), "brainpoolP256r1tls13", NULL },
+	{ 32, V(NID_brainpoolP384r1tls13), "brainpoolP384r1tls13", NULL },
+	{ 33, V(NID_brainpoolP512r1tls13), "brainpoolP512r1tls13", NULL },
+	{ 34, V(NID_id_tc26_gost_3410_2012_256_paramSetA), "GC256A", NULL },
+	{ 35, V(NID_id_tc26_gost_3410_2012_256_paramSetB), "GC256B", NULL },
+	{ 36, V(NID_id_tc26_gost_3410_2012_256_paramSetC), "GC256C", NULL },
+	{ 37, V(NID_id_tc26_gost_3410_2012_256_paramSetD), "GC256D", NULL },
+	{ 38, V(NID_id_tc26_gost_3410_2012_512_paramSetA), "GC512A", NULL },
+	{ 39, V(NID_id_tc26_gost_3410_2012_512_paramSetB), "GC512B", NULL },
+	{ 40, V(NID_id_tc26_gost_3410_2012_512_paramSetC), "GC512C", NULL },
+	{ 256, V(NID_ffdhe2048), "ffdhe2048", NULL },
+	{ 257, V(NID_ffdhe3072), "ffdhe3072", NULL },
+	{ 258, V(NID_ffdhe4096), "ffdhe4096", NULL },
+	{ 259, V(NID_ffdhe6144), "ffdhe6144", NULL },
+	{ 260, V(NID_ffdhe8192), "ffdhe8192", NULL },
+	/* The following curves are defined in the IANA list as well as in an
+	 * OpenSSL internal array but they don't have any corresponding NID.
+	 */
+	{ 25497, -1, NULL, "X25519Kyber768Draft00", NULL },
+	{ 25498, -1, NULL, "SecP256r1Kyber768Draft00", NULL },
+	{ 0xFF01, -1, NULL, "arbitrary_explicit_prime_curves", NULL },
+	{ 0xFF02, -1, NULL, "arbitrary_explicit_char2_curves", NULL },
+	{ 0, 0, NULL, NULL, NULL }
+};
+
+void init_curves_tab(void)
+{
+	int i;
+
+	for (i = 0; curves_list[i].nid_val_str; i++) {
+		char *endptr = NULL;
+		long value = 0;
+
+		errno = 0;
+		value = strtol(curves_list[i].nid_val_str, &endptr, 10);
+
+		if (!errno && endptr > curves_list[i].nid_val_str)
+			curves_list[i].nid = value;
+	}
+}
+
+INITCALL0(STG_REGISTER, init_curves_tab);
+
+/* Convert a curve identifier (2 bytes) to name */
+const char *curveid2str(int curve_id)
+{
+	struct curve *item = curves_list;
+
+	while (item->name) {
+		if (item->curve_id == curve_id)
+			return item->name;
+
+		++item;
+	}
+
+	return NULL;
+}
+
+/* convert a curves name to a openssl NID */
+int curves2nid(const char *curve)
+{
+	struct curve *curves = curves_list;
+
+	while (curves->curve_id) {
+		if ((curves->name && strcmp(curve, curves->name) == 0) ||
+		    (curves->nist && strcmp(curve, curves->nist) == 0))
+			return curves->nid;
+		curves++;
+	}
+	return -1;
 }
 
