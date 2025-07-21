@@ -919,7 +919,7 @@ const char *sigalg2str(int sigalg)
 #undef _Q
 #define _Q(x) (#x)
 #undef V
-#define V(x) .nid = -1, .nid_val_str = _Q(x)
+#define V(w, x, y, z) { .curve_id = w, .nid = -1, .nid_val_str = _Q(x), .name = y, .nist = z }
 
 /*
  * Curve identifier to curve name mapping table. We use the actual identifiers
@@ -927,60 +927,67 @@ const char *sigalg2str(int sigalg)
  * as well as NIDs, special identifiers used in SSL libraries such as OpenSSL.
  * The names used are the standard SECG ones as well as the NIST ones.
  */
-static struct curve { int curve_id; int nid; char *nid_val_str; const char *name; const char *nist; } curves_list[] =
-{
-	{ 1, V(NID_sect163k1), "sect163k1", "K-163" },
-	{ 2, V(NID_sect163r1), "sect163r1", NULL },
-	{ 3, V(NID_sect163r2), "sect163r2", "B-163" },
-	{ 4, V(NID_sect193r1), "sect193r1", NULL },
-	{ 5, V(NID_sect193r2), "sect193r2", NULL },
-	{ 6, V(NID_sect233k1), "sect233k1", "K-233" },
-	{ 7, V(NID_sect233r1), "sect233r1", "B-233" },
-	{ 8, V(NID_sect239k1), "sect239k1", NULL },
-	{ 9, V(NID_sect283k1), "sect283k1", "K-283" },
-	{ 10, V(NID_sect283r1), "sect283r1", "B-283" },
-	{ 11, V(NID_sect409k1), "sect409k1", "K-409" },
-	{ 12, V(NID_sect409r1), "sect409r1", "B-409" },
-	{ 13, V(NID_sect571k1), "sect571k1", "K-571" },
-	{ 14, V(NID_sect571r1), "sect571r1", "B-571" },
-	{ 15, V(NID_secp160k1), "secp160k1", NULL },
-	{ 16, V(NID_secp160r1), "secp160r1", NULL },
-	{ 17, V(NID_secp160r2), "secp160r2", NULL },
-	{ 18, V(NID_secp192k1), "secp192k1", NULL },
-	{ 19, V(NID_X9_62_prime192v1), "secp192r1", "P-192" },
-	{ 20, V(NID_secp224k1), "secp224k1", NULL },
-	{ 21, V(NID_secp224r1), "secp224r1", "P-224" },
-	{ 22, V(NID_secp256k1), "secp256k1", NULL },
-	{ 23, V(NID_X9_62_prime256v1), "secp256r1", "P-256" },
-	{ 24, V(NID_secp384r1), "secp384r1", "P-384" },
-	{ 25, V(NID_secp521r1), "secp521r1", "P-521" },
-	{ 26, V(NID_brainpoolP256r1), "brainpoolP256r1", NULL },
-	{ 27, V(NID_brainpoolP384r1), "brainpoolP384r1", NULL },
-	{ 28, V(NID_brainpoolP512r1), "brainpoolP512r1", NULL },
-	{ 29, V(EVP_PKEY_X25519), "ecdh_x25519", NULL },
-	{ 30, V(EVP_PKEY_X448), "ecdh_x448", NULL },
-	{ 31, V(NID_brainpoolP256r1tls13), "brainpoolP256r1tls13", NULL },
-	{ 32, V(NID_brainpoolP384r1tls13), "brainpoolP384r1tls13", NULL },
-	{ 33, V(NID_brainpoolP512r1tls13), "brainpoolP512r1tls13", NULL },
-	{ 34, V(NID_id_tc26_gost_3410_2012_256_paramSetA), "GC256A", NULL },
-	{ 35, V(NID_id_tc26_gost_3410_2012_256_paramSetB), "GC256B", NULL },
-	{ 36, V(NID_id_tc26_gost_3410_2012_256_paramSetC), "GC256C", NULL },
-	{ 37, V(NID_id_tc26_gost_3410_2012_256_paramSetD), "GC256D", NULL },
-	{ 38, V(NID_id_tc26_gost_3410_2012_512_paramSetA), "GC512A", NULL },
-	{ 39, V(NID_id_tc26_gost_3410_2012_512_paramSetB), "GC512B", NULL },
-	{ 40, V(NID_id_tc26_gost_3410_2012_512_paramSetC), "GC512C", NULL },
-	{ 256, V(NID_ffdhe2048), "ffdhe2048", NULL },
-	{ 257, V(NID_ffdhe3072), "ffdhe3072", NULL },
-	{ 258, V(NID_ffdhe4096), "ffdhe4096", NULL },
-	{ 259, V(NID_ffdhe6144), "ffdhe6144", NULL },
-	{ 260, V(NID_ffdhe8192), "ffdhe8192", NULL },
+static struct curve {
+	int curve_id;
+	int nid;
+	char *nid_val_str;
+	const char *name;
+	const char *nist;
+} curves_list[] = {
+	V( 1,      NID_sect163k1,                            "sect163k1",             "K-163"    ),
+	V( 2,      NID_sect163r1,                            "sect163r1",             NULL       ),
+	V( 3,      NID_sect163r2,                            "sect163r2",             "B-163"    ),
+	V( 4,      NID_sect193r1,                            "sect193r1",             NULL       ),
+	V( 5,      NID_sect193r2,                            "sect193r2",             NULL       ),
+	V( 6,      NID_sect233k1,                            "sect233k1",             "K-233"    ),
+	V( 7,      NID_sect233r1,                            "sect233r1",             "B-233"    ),
+	V( 8,      NID_sect239k1,                            "sect239k1",             NULL       ),
+	V( 9,      NID_sect283k1,                            "sect283k1",             "K-283"    ),
+	V( 10,     NID_sect283r1,                            "sect283r1",             "B-283"    ),
+	V( 11,     NID_sect409k1,                            "sect409k1",             "K-409"    ),
+	V( 12,     NID_sect409r1,                            "sect409r1",             "B-409"    ),
+	V( 13,     NID_sect571k1,                            "sect571k1",             "K-571"    ),
+	V( 14,     NID_sect571r1,                            "sect571r1",             "B-571"    ),
+	V( 15,     NID_secp160k1,                            "secp160k1",             NULL       ),
+	V( 16,     NID_secp160r1,                            "secp160r1",             NULL       ),
+	V( 17,     NID_secp160r2,                            "secp160r2",             NULL       ),
+	V( 18,     NID_secp192k1,                            "secp192k1",             NULL       ),
+	V( 19,     NID_X9_62_prime192v1,                     "secp192r1",             "P-192"    ),
+	V( 20,     NID_secp224k1,                            "secp224k1",             NULL       ),
+	V( 21,     NID_secp224r1,                            "secp224r1",             "P-224"    ),
+	V( 22,     NID_secp256k1,                            "secp256k1",             NULL       ),
+	V( 23,     NID_X9_62_prime256v1,                     "secp256r1",             "P-256"    ),
+	V( 24,     NID_secp384r1,                            "secp384r1",             "P-384"    ),
+	V( 25,     NID_secp521r1,                            "secp521r1",             "P-521"    ),
+	V( 26,     NID_brainpoolP256r1,                      "brainpoolP256r1",       NULL       ),
+	V( 27,     NID_brainpoolP384r1,                      "brainpoolP384r1",       NULL       ),
+	V( 28,     NID_brainpoolP512r1,                      "brainpoolP512r1",       NULL       ),
+	V( 29,     EVP_PKEY_X25519,                          "ecdh_x25519",           NULL       ),
+	V( 30,     EVP_PKEY_X448,                            "ecdh_x448",             NULL       ),
+	V( 31,     NID_brainpoolP256r1tls13,                 "brainpoolP256r1tls13",  NULL       ),
+	V( 32,     NID_brainpoolP384r1tls13,                 "brainpoolP384r1tls13",  NULL       ),
+	V( 33,     NID_brainpoolP512r1tls13,                 "brainpoolP512r1tls13",  NULL       ),
+	V( 34,     NID_id_tc26_gost_3410_2012_256_paramSetA, "GC256A",                NULL       ),
+	V( 35,     NID_id_tc26_gost_3410_2012_256_paramSetB, "GC256B",                NULL       ),
+	V( 36,     NID_id_tc26_gost_3410_2012_256_paramSetC, "GC256C",                NULL       ),
+	V( 37,     NID_id_tc26_gost_3410_2012_256_paramSetD, "GC256D",                NULL       ),
+	V( 38,     NID_id_tc26_gost_3410_2012_512_paramSetA, "GC512A",                NULL       ),
+	V( 39,     NID_id_tc26_gost_3410_2012_512_paramSetB, "GC512B",                NULL       ),
+	V( 40,     NID_id_tc26_gost_3410_2012_512_paramSetC, "GC512C",                NULL       ),
+	V( 256,    NID_ffdhe2048,                            "ffdhe2048",             NULL       ),
+	V( 257,    NID_ffdhe3072,                            "ffdhe3072",             NULL       ),
+	V( 258,    NID_ffdhe4096,                            "ffdhe4096",             NULL       ),
+	V( 259,    NID_ffdhe6144,                            "ffdhe6144",             NULL       ),
+	V( 260,    NID_ffdhe8192,                            "ffdhe8192",             NULL       ),
+
+
 	/* The following curves are defined in the IANA list as well as in an
 	 * OpenSSL internal array but they don't have any corresponding NID.
 	 */
-	{ 25497, -1, NULL, "X25519Kyber768Draft00", NULL },
-	{ 25498, -1, NULL, "SecP256r1Kyber768Draft00", NULL },
-	{ 0xFF01, -1, NULL, "arbitrary_explicit_prime_curves", NULL },
-	{ 0xFF02, -1, NULL, "arbitrary_explicit_char2_curves", NULL },
+	V( 25497,  -1,                                       "X25519Kyber768Draft00",           NULL ),
+	V( 25498,  -1,                                       "SecP256r1Kyber768Draft00",        NULL ),
+	V( 0xFF01, -1,                                       "arbitrary_explicit_prime_curves", NULL ),
+	V( 0xFF02, -1,                                       "arbitrary_explicit_char2_curves", NULL ),
 	{ 0, 0, NULL, NULL, NULL }
 };
 
