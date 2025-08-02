@@ -977,7 +977,7 @@ static int qc_ssl_provide_quic_data(struct ncbuf *ncbuf,
 				goto leave;
 			}
 		}
-		else {
+		else if (qc->mux_state != QC_MUX_READY) {
 			const unsigned char *alpn;
 			size_t alpn_len;
 
@@ -1286,8 +1286,17 @@ int qc_alloc_ssl_sock_ctx(struct quic_conn *qc, struct connection *conn)
 			}
 		}
 
-		/* Wakeup the handshake I/O handler tasklet asap to send data */
-		tasklet_wakeup(qc->wait_event.tasklet);
+		/* Wakeup the handshake I/O handler tasklet asap to send data except for
+		 * a QUIC client, if the early data encryption level has been initialized.
+		 * Some early data will be directly sent by the mux alongside Initial
+		 * CRYPTO data.
+		 *
+		 * Note that a QUIC server never installs its RX early data keys from here
+		 * (->eel is always null for a QUIC server during this SSL context
+		 * initialization).
+		 */
+		if (!qc->eel)
+			tasklet_wakeup(qc->wait_event.tasklet);
 	}
 
 	ctx->xprt = xprt_get(XPRT_QUIC);

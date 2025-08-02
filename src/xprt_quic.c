@@ -149,7 +149,7 @@ static int qc_conn_init(struct connection *conn, void **xprt_ctx)
 /* Start the QUIC transport layer */
 static int qc_xprt_start(struct connection *conn, void *ctx)
 {
-	int ret = 0;
+	int ret = -1;
 	struct quic_conn *qc;
 
 	qc = conn->handle.qc;
@@ -160,7 +160,25 @@ static int qc_xprt_start(struct connection *conn, void *ctx)
 		qc->mux_state = QC_MUX_READY;
 	}
 	else {
-		conn->flags |= CO_FL_SSL_WAIT_HS | CO_FL_WAIT_L6_CONN;
+		if (!qc->eel) {
+			/* Connection without O-RTT */
+			conn->flags |= CO_FL_SSL_WAIT_HS | CO_FL_WAIT_L6_CONN;
+		}
+		else {
+			struct ssl_sock_ctx *ssl_ctx = ctx;
+
+			/* Start the mux asap when early data encryption level is available. */
+			conn->flags |= CO_FL_SSL_WAIT_HS | CO_FL_WAIT_L6_CONN | CO_FL_WAIT_XPRT;
+			if (conn_create_mux(ssl_ctx->conn, NULL) < 0) {
+				TRACE_ERROR("mux creation failed", QUIC_EV_CONN_IO_CB, qc, &qc->state);
+				goto err;
+			}
+
+			ssl_ctx->conn->flags &= ~CO_FL_WAIT_XPRT;
+			qc->mux_state = QC_MUX_READY;
+			/* Wake up MUX after its creation. Operation similar to TLS+ALPN on TCP stack. */
+			ssl_ctx->conn->mux->wake(ssl_ctx->conn);
+		}
 	}
 
 	/* Schedule quic-conn to ensure post handshake frames are emitted. This
@@ -171,9 +189,12 @@ static int qc_xprt_start(struct connection *conn, void *ctx)
 		tasklet_wakeup(qc->wait_event.tasklet);
 
 	ret = 1;
- out:
+ leave:
 	TRACE_LEAVE(QUIC_EV_CONN_NEW, qc);
 	return ret;
+ err:
+	TRACE_DEVEL("leaving on error", QUIC_EV_CONN_NEW, qc);
+	goto leave;
 }
 
 static struct ssl_sock_ctx *qc_get_ssl_sock_ctx(struct connection *conn)
