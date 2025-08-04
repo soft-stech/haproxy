@@ -308,9 +308,12 @@ write:
 		if (objt_server(qc->target)) {
 			const unsigned char *tp;
 			size_t tplen;
+			int edata_accepted = qc_ssl_eary_data_accepted(ssl);
 
+			TRACE_PROTO("storing peer transport parameters",
+			            QUIC_EV_CONN_IO_CB, qc, NULL, NULL, ssl);
 			SSL_get_peer_quic_transport_params(ssl, &tp, &tplen);
-			if (!tplen || !quic_transport_params_store(qc, 1,tp, tp + tplen)) {
+			if (!tplen || !quic_transport_params_store(qc, 1,tp, tp + tplen, edata_accepted)) {
 				TRACE_ERROR("Could not parse remote transport paratemers",
 				            QUIC_EV_CONN_RWSEC, qc);
 				goto leave;
@@ -602,8 +605,12 @@ static int ha_quic_ossl_got_transport_params(SSL *ssl, const unsigned char *para
 		            QUIC_EV_TRANSP_PARAMS, qc);
 		ret = 1;
 	}
-	else if (!quic_transport_params_store(qc, !l, params, params + params_len)) {
-		goto err;
+	else {
+		TRACE_PROTO("storing peer transport parameters",
+		            QUIC_EV_CONN_IO_CB, qc, NULL, NULL, ssl);
+		if (!quic_transport_params_store(qc, !l, params, params + params_len,
+		                                 qc_ssl_eary_data_accepted(ssl)))
+			goto err;
 	}
 
 	ret = 1;
