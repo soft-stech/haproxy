@@ -881,10 +881,15 @@ struct acl_cond *parse_acl_cond(const char **args, struct list *known_acl,
 			int arg_end = arg + 1;
 			const char **args_new;
 
-			while (*args[arg_end] && strcmp(args[arg_end], "}") != 0)
+			while (args[arg_end] && strcmp(args[arg_end], "}") != 0) {
+				if (*args[arg_end] == '\0') {
+					memprintf(err, "empty ACL argument inside '{}' is not allowed");
+					goto out_free_suite;
+				}
 				arg_end++;
+			}
 
-			if (!*args[arg_end]) {
+			if (!args[arg_end] || !*args[arg_end]) {
 				memprintf(err, "missing closing '}' in condition");
 				goto out_free_suite;
 			}
